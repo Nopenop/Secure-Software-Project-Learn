@@ -1,16 +1,29 @@
 # Secure-Software-Project-Learn
-Look through here if you want to 
+This repository is a list/ guide of the tools and technologies that we will most likely use for our project. 
+
+I created this repository so each of our members has a base line knowledge and enables a basis of terminology and skills for productive communication towards the production of our project
+
+If you ever have any questions, please hit me up on discord and I would be down to help you out on call, text, or in person.
+
+### Thank you for looking through this guide. You are actively taking the steps you will need to better understand the technologies used for this project and building the skills that are in demand of developers/programmers
 
 ## Developer Tools
 
-These are the set of tools that I believe will be critical to efficiently completing this project that each team member should have some experience with.
+These are the set of tools that I believe will be critical for efficiently completing this project that each team member should have some experience with.
 
 ### Text Editor (visual studio code)
+visual studio code is a graphical text editor that is extremely user friendly. If this is your for ide/text editor, this is a great choice to learn the tools to make you a better developer.
 
+Furthermore, vscode has a variety of easy to install extensions that will help with beginning our project journey
 
+Here is a beginner's tutorial for vscode that will get you acquainted with the editor: 
+
+[VSCode Tutorial][vscode_tutorial]
 
 ### Git
 Version Control - how does one create and modified code in a group.
+
+Git is a version control system that can be used to take several peoples code and automate combining the changes added.
 
 This tutorial will give you a basic understanding of what git does, why it is used and some of the command line functionality:
 
@@ -57,6 +70,7 @@ This is some of docker's own tutorials if you would like to get more practice
 
 [Docker Practice][docker_practice]
 
+[vscode_tutorial]: https://www.youtube.com/watch?v=VqCgcpAypFQ
 [git_intro_link]: https://www.freecodecamp.org/news/what-is-git-and-how-to-use-it-c341b049ae61/
 [git_documentation]: https://git-scm.com/docs
 [linux_tutorial]: https://linuxjourney.com/
