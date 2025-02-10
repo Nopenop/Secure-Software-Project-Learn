@@ -1,5 +1,6 @@
 # Secure-Software-Project-Learn
-This repository is a list/ guide of the tools and technologies that we will most likely use for our project. 
+
+This repository is a list/ guide of the tools and technologies that we will most likely use for our project.
 
 I created this repository so each of our members has a base line knowledge and enables a basis of terminology and skills for productive communication towards the production of our project
 
@@ -12,15 +13,17 @@ If you ever have any questions, please hit me up on discord and I would be down 
 These are the set of tools that I believe will be critical for efficiently completing this project that each team member should have some experience with.
 
 ### Text Editor (visual studio code)
+
 visual studio code is a graphical text editor that is extremely user friendly. If this is your for ide/text editor, this is a great choice to learn the tools to make you a better developer.
 
 Furthermore, vscode has a variety of easy to install extensions that will help with beginning our project journey
 
-Here is a beginner's tutorial for vscode that will get you acquainted with the editor: 
+Here is a beginner's tutorial for vscode that will get you acquainted with the editor:
 
 [VSCode Tutorial][vscode_tutorial]
 
 ### Git
+
 Version Control - how does one create and modified code in a group.
 
 Git is a version control system that can be used to take several peoples code and automate combining the changes added.
@@ -35,7 +38,7 @@ This is git's reference documentation (helpful for deeper understanding of how i
 
 ## Cloud Native Information
 
-The following sections will give you an introduction to the tools we will use to implement our cloud based system. 
+The following sections will give you an introduction to the tools we will use to implement our cloud based system.
 
 I suggest that you go through this in order as they are listed (linux, docker, kubernetes). You will come to see that kubernetes built off of containerization (docker) and containerization is built off of the linux shell.
 
@@ -51,9 +54,10 @@ After installing and running docker desktop, you should be able to open you term
 docker run -it ubuntu sh
 ```
 
-If you do not know how docker works right now, that is ok. This is will create a locally running ubuntu filesystem on your machine for you to learn linux. 
+If you do not know how docker works right now, that is ok. This is will create a locally running ubuntu filesystem on your machine for you to learn linux.
 
 ### Linux
+
 This is a link to an interaction tutorial for linux. For our purposes, you can stick to the grasshopper lessons :)
 
 You should be able to follow the steps within that running instance of ubuntu above.
@@ -75,5 +79,6 @@ This is some of docker's own tutorials if you would like to get more practice
 [git_documentation]: https://git-scm.com/docs
 [linux_tutorial]: https://linuxjourney.com/
 [docker_introduction]: https://www.youtube.com/results?search_query=Docker%20containerization%20explained
+
 [docker_desktop]: [https://docs.docker.com/desktop/]
 [docker_practice]: https://docs.docker.com/get-started/introduction/

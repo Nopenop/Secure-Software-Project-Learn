@@ -1,0 +1,6 @@
+/bin
+/include
+/lib
+/.env
+/.venv
+/db.sqlite3
