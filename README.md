@@ -82,3 +82,17 @@ This is some of docker's own tutorials if you would like to get more practice
 
 [docker_desktop]: [https://docs.docker.com/desktop/]
 [docker_practice]: https://docs.docker.com/get-started/introduction/
+
+## General Guide the Code
+
+### /admin
+
+/admin contains the settings, url pathing, and other things that allow us to make Django work correctly. Generally speaking, you should only be touching URLs regularly while to change the pathing for functions. Ask if you need help to change something on settings.py.
+
+### /components
+
+/components contains the components of the project - it will contain both the tooling to use components and the main components that make this program function. It also contains views, models, and test python files - generally speaking admin.py here will not be used and apps.py will practically never be used unless we need a name change for components.
+
+### manage.py
+
+manage.py starts the program and hosts the server - to host the server, type in `python3 manage.py runserver`or `py manage.py runserver` in your terminal at the base folder. If one doesn't work, try the other.
