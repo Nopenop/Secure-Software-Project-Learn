@@ -16,10 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from components import views
+from components import user_services, web_services, monitoring_services
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    #       Example of how to add a path:
-    #       path('pathing/you/want', views.functionName)
+    path('v2/api/create-user/', user_services.createUser),
+    path('v2/api/create-endpoint/', monitoring_services.createEndpoint),
+    path('v2/api/account-login/', web_services.accountLogin),
 ]
