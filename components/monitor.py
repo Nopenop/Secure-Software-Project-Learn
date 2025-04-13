@@ -1,3 +1,4 @@
+import json
 import os
 import threading
 import psutil
@@ -5,9 +6,9 @@ import time
 import shutil
 import requests
 import sqlite3
-import json
 from datetime import datetime
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -30,37 +31,41 @@ class Monitor(threading.Thread):
     def _log(self, conn, sql: str, parameters: tuple):
         try:
             cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON;")
             cursor.execute(sql, parameters)
             conn.commit()
         except sqlite3.ProgrammingError as p:
-            print(f"A Programming error occurred: {p}")
+            raise Exception(f"A Programming error occurred {p}")
         except sqlite3.OperationalError as e:
-            print(f"An sqlite3 operational error occurred: {e}")
+            raise Exception(f"An sqlite3 operationalerror error occurred: {e}")
+        except sqlite3.IntegrityError as e:
+            raise Exception(f"An sqlite3 error occurred: {e}")
         except sqlite3.Error as e:
-            print(f"An sqlite3 error occurred: {e}")
+            raise Exception(f"An sqlite3 error occurred: {e}")
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            raise Exception(f"An error occurred: {e}")
 
     def _fail_monitor(self, conn):
-        print("Monitor Failed — shutting down thread.")
+        # should send diagnosis to loggging api
+        # should kill monitor
+        print("Monitor Failed")
         conn.close()
 
-    def _send_mail(self, subject: str, message: str):
+    def _send_mail(
+        self,
+        subject: str,
+        message: str,
+    ):
         try:
-            # build the base payload
+            # Prepare the payload
             payload = {
                 "subject": subject,
                 "message": message,
             }
-            # if this monitor has an endpoint_id, include it
-            if hasattr(self, "_endpoint_id"):
-                payload["endpoint_id"] = self._endpoint_id
 
             response = requests.post(
                 "http://127.0.0.1:8000/v2/api/email",
                 data=json.dumps(payload),
-                headers={"Content-Type": "application/json"},
-                verify=False  # we're disabling warnings above; in prod remove this
             )
             response.raise_for_status()
             try:
@@ -73,9 +78,14 @@ class Monitor(threading.Thread):
 
 
 class CPU_Monitor(Monitor):
-    def __init__(self, time_weight: int, tolerance: int,
-                 tolerated_cpu_usage: float, time_to_gather_cpu: int,
-                 database_path: str):
+    def __init__(
+        self,
+        time_weight: int,
+        tolerance: int,
+        tolerated_cpu_usage: float,
+        time_to_gather_cpu: int,
+        database_path: str,
+    ):
         super().__init__(time_weight, tolerance, database_path)
         self._tolerated_cpu_usage = tolerated_cpu_usage
         self._time_to_gather_cpu = time_to_gather_cpu
@@ -87,12 +97,14 @@ class CPU_Monitor(Monitor):
         conn = sqlite3.connect(self._database_path)
         while True:
             cpu_percent = psutil.cpu_percent(self._time_to_gather_cpu)
-            cur_time = datetime.now()
-            self._log(
-                conn,
-                "INSERT INTO components_cpu_diagnostics(cpu_percent_usage, event_time) VALUES (?, ?)",
-                (cpu_percent, cur_time)
-            )
+            event_time = datetime.fromtimestamp(time.time())
+            sql_string = """INSERT INTO components_cpu_diagnostics(cpu_percent_usage, event_time) VALUES ( ?, ?)"""
+            sql_parameters = (cpu_percent, event_time)
+            try:
+                self._log(conn, sql_string, sql_parameters)
+            except Exception:
+                self._fail_monitor(conn)
+                return
 
             if self._over_used_cpu(cpu_percent):
                 self._tally_fault()
@@ -100,7 +112,7 @@ class CPU_Monitor(Monitor):
             if self._over_tolerance():
                 self._send_mail(
                     "CPU",
-                    f"Tolerated CPU usage of {self._tolerated_cpu_usage}% exceeded {self._tolerance} times"
+                    f"Tolerated CPU usage of {self._tolerated_cpu_usage}% exceeded {self._tolerance} times",
                 )
                 self._fail_monitor(conn)
                 return
@@ -109,8 +121,13 @@ class CPU_Monitor(Monitor):
 
 
 class Memory_Monitor(Monitor):
-    def __init__(self, time_weight: int, tolerance: int,
-                 tolerated_memory_usage: float, database_path: str):
+    def __init__(
+        self,
+        time_weight: int,
+        tolerance: int,
+        tolerated_memory_usage: float,
+        database_path: str,
+    ):
         super().__init__(time_weight, tolerance, database_path)
         self._tolerated_memory_usage = tolerated_memory_usage
 
@@ -122,22 +139,35 @@ class Memory_Monitor(Monitor):
         while True:
             vm = psutil.virtual_memory()
             memory_percent = vm.percent
-            total_gb = vm.total / (1024**3)
-            usage_gb = memory_percent * total_gb * 0.01
-            cur_time = datetime.now()
-            self._log(
-                conn,
-                "INSERT INTO components_memory_diagnostics(memory_percent_usage, memory_GB_total, memory_GB_usage, event_time) VALUES (?, ?, ?, ?)",
-                (memory_percent, total_gb, usage_gb, cur_time)
+            memory_gb_total = vm.total / 1073741824
+            memory_gb_usage = memory_percent * memory_gb_total * 0.01
+            event_time = datetime.fromtimestamp(time.time())
+            sql_string = """INSERT INTO components_memory_diagnostics(memory_percent_usage, memory_GB_total, memory_GB_usage, event_time) VALUES ( ?, ?, ?, ?)"""
+            sql_parameters = (
+                memory_percent,
+                memory_gb_total,
+                memory_gb_usage,
+                event_time,
             )
+            try:
+                self._log(
+                    conn,
+                    "INSERT INTO components_memory_diagnostics(memory_percent_usage, memory_GB_total, memory_GB_usage, event_time) VALUES ( ?, ?, ?, ?)",
+                    (memory_percent, memory_gb_total, memory_gb_usage, event_time),
+                )
+                self._log(conn, sql_string, sql_parameters)
+            except Exception:
+                self._fail_monitor(conn)
+                return
 
-            if self._over_used_memory(memory_percent):
+            if self._over_used_memory(memory_percent=memory_percent):
                 self._tally_fault()
 
             if self._over_tolerance():
+                # call to logging api to notify failure and kill monitor
                 self._send_mail(
                     "MEMORY",
-                    f"Tolerated memory usage of {self._tolerated_memory_usage}% exceeded {self._tolerance} times"
+                    f"Tolerated memory usage {self._tolerated_memory_usage} exceded {self._tolerance} times",
                 )
                 self._fail_monitor(conn)
                 return
@@ -146,8 +176,14 @@ class Memory_Monitor(Monitor):
 
 
 class Disk_Monitor(Monitor):
-    def __init__(self, time_weight: int, tolerance: int,
-                 tolerated_disk_usage: float, path: str, database_path: str):
+    def __init__(
+        self,
+        time_weight: int,
+        tolerance: int,
+        tolerated_disk_usage: float,
+        path: str,
+        database_path: str,
+    ):
         super().__init__(time_weight, tolerance, database_path)
         self._tolerated_disk_usage = tolerated_disk_usage
         self._path = path
@@ -158,24 +194,32 @@ class Disk_Monitor(Monitor):
     def run(self):
         conn = sqlite3.connect(self._database_path)
         while True:
-            usage = shutil.disk_usage(self._path)
-            disk_percent = usage.used / usage.total * 100
-            total_gb = usage.total / (1024**3)
-            used_gb = usage.used / (1024**3)
-            cur_time = datetime.now()
-            self._log(
-                conn,
-                "INSERT INTO components_disk_diagnostics(disk_percent_usage, disk_GB_total, disk_GB_usage, event_time) VALUES (?, ?, ?, ?)",
-                (disk_percent, total_gb, used_gb, cur_time)
+            disk_usage = shutil.disk_usage(self._path)
+            disk_percent = disk_usage.used / disk_usage.total
+            disk_gb_usage = disk_usage.used / 1073741824
+            disk_gb_total = disk_usage.total / 1073741824
+            event_time = datetime.fromtimestamp(time.time())
+            sql_string = """INSERT INTO components_disk_diagnostics(disk_percent_usage, disk_GB_total, disk_GB_usage, event_time) VALUES ( ?, ?, ?, ?)"""
+            sql_parameters = (
+                disk_percent,
+                disk_gb_total,
+                disk_gb_usage,
+                event_time,
             )
+            try:
+                self._log(conn, sql_string, sql_parameters)
+            except Exception:
+                self._fail_monitor(conn)
+                return
 
-            if self._over_used_disk(disk_percent):
+            if self._over_used_disk(disk_percent=disk_percent):
                 self._tally_fault()
 
             if self._over_tolerance():
+                # call to logging api to notify failure and kill monitor
                 self._send_mail(
                     "DISK",
-                    f"Tolerated disk usage of {self._tolerated_disk_usage}% exceeded {self._tolerance} times"
+                    f"Tolerated disk usage {self._tolerated_disk_usage} exceded {self._tolerance} times",
                 )
                 self._fail_monitor(conn)
                 return
@@ -184,12 +228,19 @@ class Disk_Monitor(Monitor):
 
 
 class Endpoint_Monitor(Monitor):
-    def __init__(self, time_weight: int, tolerance: int,
-                 endpoint_id: str, url: str, expected_code: int,
-                 database_path: str, certificate_path: str):
+    def __init__(
+        self,
+        time_weight: int,
+        tolerance: int,
+        endpoint_id: str,
+        url: str,
+        expected_code: int,
+        database_path: str,
+        certificate_path: str,
+    ):
         super().__init__(time_weight, tolerance, database_path)
         self._endpoint_id = endpoint_id
-        self.endpoint_id = endpoint_id    # expose publicly for _send_mail
+        self.endpoint_id = endpoint_id  # expose publicly for _send_mail
         self._url = url
         self._expected_code = expected_code
         self._certificate_path = certificate_path
@@ -204,42 +255,59 @@ class Endpoint_Monitor(Monitor):
     def run(self):
         conn = sqlite3.connect(self._database_path)
         while True:
-            cur_time = datetime.now()
+            event_time = datetime.fromtimestamp(time.time())
             try:
-                response = requests.get(self._url, verify=False)
-                self._log(
-                    conn,
-                    "INSERT INTO components_endpoint_log(endpoint_status, event_time, endpoint_id_id) VALUES (?, ?, ?)",
-                    (response.status_code, cur_time, self._endpoint_id)
+                response = requests.get(self._url)
+                sql_string = """INSERT INTO components_endpoint_log(endpoint_status, event_time, endpoint_id_id) VALUES ( ?, ?, ?)"""
+                sql_parameters = (
+                    response.status_code,
+                    event_time,
+                    self._endpoint_id,
                 )
+                try:
+                    self._log(conn, sql_string, sql_parameters)
+                except Exception:
+                    self._fail_monitor(conn)
+                    return
 
                 if not self._check_response_code(response):
                     self._tally_fault()
                     self._build_diagnosis(
-                        f"{cur_time}: Expected {self._expected_code}, got {response.status_code}\n"
+                        f"{event_time}: Code expected {self._expected_code}: Code received: {response.status_code}\n"
                     )
                 response.close()
 
             except requests.exceptions.SSLError as s:
-                self._build_diagnosis(f"{cur_time}: SSL error: {s}\n")
-                self._send_mail("SSL", self._diagnosis)
+                # fail endpoint monitor
+                self._build_diagnosis(
+                    f"{event_time}: Ceritificate invalid. Error: {s}\n"
+                )
+                self._send_mail(
+                    "SSL",
+                    f"{self._diagnosis}",
+                )
                 self._fail_monitor(conn)
                 return
-
-            except (requests.exceptions.ConnectionError,
-                    requests.exceptions.HTTPError) as e:
-                self._build_diagnosis(f"{cur_time}: Connection/HTTP error: {e}\n")
+            except requests.exceptions.ConnectionError as c:
+                self._build_diagnosis(f"{event_time}: Connection Error: {c}\n")
                 self._tally_fault()
-
+            except requests.exceptions.HTTPError as h:
+                self._build_diagnosis(f"{event_time}: HTTPError: {h}\n")
+                self._tally_fault()
             except Exception as e:
-                self._build_diagnosis(f"{cur_time}: Unknown error: {e}\n")
-                self._send_mail("HTTP", self._diagnosis)
+                self._build_diagnosis(f"{event_time}: Unknown Error: {e}\n")
+                self._send_mail(
+                    "HTTP",
+                    f"{self._diagnosis}",
+                )
                 self._fail_monitor(conn)
                 return
-
             finally:
                 if self._over_tolerance():
-                    self._send_mail("ENDPOINT", self._diagnosis)
+                    self._send_mail(
+                        "ENDPOINT",
+                        f"{self._diagnosis}",
+                    )
                     self._fail_monitor(conn)
                     return
 
@@ -247,11 +315,13 @@ class Endpoint_Monitor(Monitor):
 
 
 def main():
-    db_path = os.path.join(os.path.dirname(__file__), "../db.sqlite3")
-    cpu_mon = CPU_Monitor(time_weight=2, tolerance=1,
-                          tolerated_cpu_usage=80.0,
-                          time_to_gather_cpu=3,
-                          database_path=db_path)
+    cpu_mon = CPU_Monitor(
+        time_weight=2,
+        tolerance=1,
+        tolerated_cpu_usage=0,
+        time_to_gather_cpu=3,
+        database_path="../db.sqlite3",
+    )
     cpu_mon.start()
 
     # Uncomment to run other monitors:
