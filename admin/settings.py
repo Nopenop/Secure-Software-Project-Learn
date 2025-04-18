@@ -144,8 +144,17 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ["HOST_EMAIL"]
-EMAIL_HOST_PASSWORD = os.environ["HOST_EMAIL_PASSWORD"]
+
+try:
+    EMAIL_HOST_USER = os.environ["HOST_EMAIL"]
+except Exception:
+    EMAIL_HOST_USER = ""
+
+try:
+    EMAIL_HOST_USER = os.environ["HOST_EMAIL"]
+except Exception:
+    EMAIL_HOST_PASSWORD = ""
+
 EMAIL_USE_TLS = True
 
 os.environ["SSL_CERT_FILE"] = certifi.where()

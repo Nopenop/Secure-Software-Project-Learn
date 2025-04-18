@@ -27,16 +27,19 @@ class Monitor(threading.Thread):
     def _log(self, conn, sql: str, parameters: tuple):
         try:
             cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON;")
             cursor.execute(sql, parameters)
             conn.commit()
         except sqlite3.ProgrammingError as p:
-            print(f"A Programming error occurred {p}")
+            raise Exception(f"A Programming error occurred {p}")
         except sqlite3.OperationalError as e:
-            print(f"An sqlite3 operationalerror error occurred: {e}")
+            raise Exception(f"An sqlite3 operationalerror error occurred: {e}")
+        except sqlite3.IntegrityError as e:
+            raise Exception(f"An sqlite3 error occurred: {e}")
         except sqlite3.Error as e:
-            print(f"An sqlite3 error occurred: {e}")
+            raise Exception(f"An sqlite3 error occurred: {e}")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            raise Exception(f"An error occurred: {e}")
 
     def _fail_monitor(self, conn):
         # should send diagnosis to loggging api
@@ -99,7 +102,11 @@ class CPU_Monitor(Monitor):
             cur_time = datetime.fromtimestamp(time.time())
             sql_string = """INSERT INTO components_cpu_diagnostics(cpu_percent_usage, event_time) VALUES ( ?, ?)"""
             sql_parameters = (cpu_percent, cur_time)
-            self._log(conn, sql_string, sql_parameters)
+            try:
+                self._log(conn, sql_string, sql_parameters)
+            except Exception:
+                self._fail_monitor(conn)
+                return
 
             if self._over_used_cpu(current_cpu_usage=cpu_percent):
                 self._tally_fault()
@@ -145,7 +152,11 @@ class Memory_Monitor(Monitor):
                 memory_gc_usage,
                 cur_time,
             )
-            self._log(conn, sql_string, sql_parameters)
+            try:
+                self._log(conn, sql_string, sql_parameters)
+            except Exception:
+                self._fail_monitor(conn)
+                return
 
             if self._over_used_memory(memory_percent=memory_percent):
                 self._tally_fault()
@@ -195,7 +206,11 @@ class Disk_Monitor(Monitor):
                 disk_gc_usage,
                 cur_time,
             )
-            self._log(conn, sql_string, sql_parameters)
+            try:
+                self._log(conn, sql_string, sql_parameters)
+            except Exception:
+                self._fail_monitor(conn)
+                return
 
             if self._over_used_disk(disk_percent=disk_percent):
                 self._tally_fault()
@@ -253,13 +268,20 @@ class Endpoint_Monitor(Monitor):
                     cur_time,
                     self._endpoint_id,
                 )
-                self._log(conn, sql_string, sql_parameters)
+                try:
+                    self._log(conn, sql_string, sql_parameters)
+                except Exception:
+                    print("happiness")
+                    self._fail_monitor(conn)
+                    return
+
                 if not self._check_response_code(response):
                     self._tally_fault()
                     self._build_diagnosis(
                         f"{cur_time}: Code expected {self._expected_code}: Code received: {response.status_code}\n"
                     )
                 response.close()
+
             except requests.exceptions.SSLError as s:
                 # fail endpoint monitor
                 self._build_diagnosis(f"{cur_time}: Ceritificate invalid. Error: {s}\n")
@@ -296,23 +318,23 @@ class Endpoint_Monitor(Monitor):
 
 
 def main():
-    my_cpu_monitor = CPU_Monitor(2, 1, 0, 3, "../db.sqlite3")
+    # my_cpu_monitor = CPU_Monitor(2, 1, 100, 3, "../db.sqlite3")
     # my_memory_monitor = Memory_Monitor(2, 1, 0, "../db.sqlite3")
     # my_disk_monitor = Disk_Monitor(2, 1, 0, "/", "../db.sqlite3")
-    # my_endpoint_monitor = Endpoint_Monitor(
-    #     2,
-    #     1,
-    #     "123",
-    #     "https://www.geeksforgeeks.org/",
-    #     204,
-    #     "../db.sqlite3",
-    #     "/Users/noahcampise/project/secure-software-project/monitor-thread/server.pem",
-    # )
+    my_endpoint_monitor = Endpoint_Monitor(
+        2,
+        1,
+        "123",
+        "https://www.geeksforgeeks.org/",
+        200,
+        "../db.sqlite3",
+        "/Users/noahcampise/project/secure-software-project/monitor-thread/server.pem",
+    )
 
-    my_cpu_monitor.start()
+    # my_cpu_monitor.start()
     # my_memory_monitor.start()
     # my_disk_monitor.start()
-    # my_endpoint_monitor.start()
+    my_endpoint_monitor.start()
 
     time.sleep(20)
 
