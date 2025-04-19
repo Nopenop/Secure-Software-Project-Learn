@@ -139,3 +139,11 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True 
 CSRF_COOKIE_HTTPONLY = False
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = os.environ["HOST_EMAIL"]
+EMAIL_HOST_PASSWORD = os.environ["HOST_EMAIL_PASSWORD"]
+EMAIL_USE_TLS = True

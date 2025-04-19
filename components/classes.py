@@ -6,7 +6,6 @@ class Endpoint_Data:
     endpoint_id: str 
     endpoint_name: str 
     endpoint_path: str 
-    endpoint_status: int
     
     
 @dataclass

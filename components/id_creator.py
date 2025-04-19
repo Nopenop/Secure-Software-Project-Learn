@@ -8,7 +8,7 @@ def user_ID_Creator():
         random_bytes = secrets.token_bytes(16)
         hex_string = binascii.hexlify(random_bytes).decode() 
     
-        #if the user ID is unique, allow create new ID
+        #if the user ID is unique, allow creation of new ID
         if not User.objects.filter(user_id=hex_string).exists():
             return hex_string
     
@@ -19,6 +19,6 @@ def endpoint_ID_Creator():
         random_bytes = secrets.token_bytes(16)
         hex_string = binascii.hexlify(random_bytes).decode() 
     
-        #if the endpoint ID is unique, allow create new ID
+        #if the endpoint ID is unique, allow creation of new ID
         if not Endpoint.objects.filter(endpoint_id=hex_string).exists():
             return hex_string

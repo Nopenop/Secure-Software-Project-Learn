@@ -21,20 +21,19 @@ def ID_Creator():
     
 @csrf_exempt
 def createUser(request:requests): 
+    try:
         if request.method == "POST": 
         #if the request is a post request, map the data to the corresponding data 
 	    #class and then write it into the database 
+     
             request_body = json.loads(request.body)	 
-            
-            print("User Saved")
+    
 
             config_data = User_Data(
             user_id = user_ID_Creator(),
             email = request_body["email"],
             password = request_body["password"],
             )
-            
-            print("User Saved")
             #Creates a new user and saves it to the DB
             new_user = User(user_id = config_data.user_id,
                             email = config_data.email,
@@ -43,6 +42,6 @@ def createUser(request:requests):
 
             
             new_user.save()
-            print("User Saved")
-        
-        return HttpResponse(status = 200)
+            return HttpResponse(status = 200)
+    except:
+        return HttpResponse(status = 400)
