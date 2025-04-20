@@ -4,8 +4,7 @@
 /.env
 /.venv
 /db.sqlite3
-components/__pycache__/*
-admin/__pycache__/*
-components/migrations/*
+/tmp/*
+**/__pycache__
 .DS_Store
 .DS_Store

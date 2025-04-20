@@ -34,10 +34,45 @@ def accountLogin(request:requests):
         return HttpResponse(status=405)
     
 
+@csrf_exempt
+def getUserEndpoints(request): 
+        try:
+            if request.method == "GET":
+                user_id = request.GET.get('userID')
+                user = User.objects.get(user_id=user_id)
+
+                endpoints = Endpoint.objects.filter(user_id=user)
 
 
-#Get endpoints for user home page Function
+                if not endpoints.exists():
+                    endpoints_list = []
+                    return JsonResponse({"endpoints": endpoints_list}, status=200)
+
+            #List of endpoints and base details
+                endpoints_list = [
+                {
+                "endpoint_id": endpoint.endpoint_id,
+                "endpoint_name": endpoint.endpoint_name,
+                "endpoint_path": endpoint.endpoint_path
+                }
+                for endpoint in endpoints
+            ]
+
+                return JsonResponse({"endpoints": endpoints_list}, status=200)
+    
+        except:
+            return JsonResponse({"message":"Error in fetching endpoints"}, status = 400)
+
+
 
 #Edit an endpoint function
+
+def editEndpoint(request:requests):
+    
+    if request.method == "POST":
+    
+        endpoint_id = request.GET.get('Endpoint_ID')
+        Endpoint.objects.get(endpoint_id=endpoint_id)
+        return JsonResponse({})
 
 #Delete an endpoint function
