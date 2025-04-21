@@ -53,32 +53,7 @@ class Monitor(threading.Thread):
         print("Monitor Failed")
         conn.close()
 
-    def _send_mail(
-        self,
-        subject: str,
-        message: str,
-    ):
-        try:
-            # Prepare the payload
-            payload = {
-                "subject": subject,
-                "message": message,
-            }
-
-            response = requests.post(
-                os.environ("HOST_URL")+"v2/api/email/",
-                data=json.dumps(payload),
-            )
-            response.raise_for_status()
-            try:
-                return response.json()
-            except ValueError:
-                return {"result": response.text}
-
-        except requests.exceptions.RequestException as e:
-            return {"result": f"Error sending request: {e}"}
-        
-        
+       
     def _send_mail_monitor(
         self,
         subject: str,
