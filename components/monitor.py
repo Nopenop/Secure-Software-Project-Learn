@@ -8,6 +8,7 @@ import sqlite3
 import json
 from datetime import datetime
 import urllib3
+from dotenv import load_dotenv
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -130,6 +131,7 @@ class Memory_Monitor(Monitor):
                 "INSERT INTO components_memory_diagnostics(memory_percent_usage, memory_GB_total, memory_GB_usage, event_time) VALUES (?, ?, ?, ?)",
                 (memory_percent, total_gb, usage_gb, cur_time)
             )
+        
 
             if self._over_used_memory(memory_percent):
                 self._tally_fault()
@@ -200,6 +202,18 @@ class Endpoint_Monitor(Monitor):
 
     def _build_diagnosis(self, log: str):
         self._diagnosis += log
+        
+    def update_status(self, status:int):
+        payload = {"endpoint_id":self.endpoint_id,
+                "endpoint_status":status}
+            
+        response = requests.post(
+                "http://127.0.0.1:8000/v2/api/update-status",
+                data=json.dumps(payload),
+                headers={"Content-Type": "application/json"},
+                verify=False
+        )
+            
 
     def run(self):
         conn = sqlite3.connect(self._database_path)
@@ -212,35 +226,46 @@ class Endpoint_Monitor(Monitor):
                     "INSERT INTO components_endpoint_log(endpoint_status, event_time, endpoint_id_id) VALUES (?, ?, ?)",
                     (response.status_code, cur_time, self._endpoint_id)
                 )
+                
+                self.update_status(0)
+                
+                
 
                 if not self._check_response_code(response):
                     self._tally_fault()
                     self._build_diagnosis(
                         f"{cur_time}: Expected {self._expected_code}, got {response.status_code}\n"
                     )
+                    self.update_status(0)
                 response.close()
 
             except requests.exceptions.SSLError as s:
                 self._build_diagnosis(f"{cur_time}: SSL error: {s}\n")
                 self._send_mail("SSL", self._diagnosis)
                 self._fail_monitor(conn)
+                self.update_status(1)
+       
                 return
 
             except (requests.exceptions.ConnectionError,
                     requests.exceptions.HTTPError) as e:
                 self._build_diagnosis(f"{cur_time}: Connection/HTTP error: {e}\n")
                 self._tally_fault()
+                self.update_status(1)
+ 
 
             except Exception as e:
                 self._build_diagnosis(f"{cur_time}: Unknown error: {e}\n")
                 self._send_mail("HTTP", self._diagnosis)
                 self._fail_monitor(conn)
+                self.update_status(1)
                 return
 
             finally:
                 if self._over_tolerance():
                     self._send_mail("ENDPOINT", self._diagnosis)
                     self._fail_monitor(conn)
+                    self.update_status(1)
                     return
 
             time.sleep(self._time_weight)

@@ -25,5 +25,6 @@ urlpatterns = [
     path('v2/api/user-endpoints/', web_services.getUserEndpoints),
     path('v2/api/edit-endpoint/', monitoring_services.editEndpoint),
     path('v2/api/delete-endpoint/', monitoring_services.deleteEndpoint),
+    path("v2/api/update-status", view=monitoring_services.update_status),
     path("v2/api/email", view=email_services.send_mail_page),
 ]

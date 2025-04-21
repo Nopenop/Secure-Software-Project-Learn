@@ -13,6 +13,7 @@ class Endpoint(models.Model):
     endpoint_id = models.CharField(primary_key=True, max_length=32, default = -1) #Primary Key
     endpoint_name = models.CharField(max_length=60, default="")
     endpoint_path = models.CharField(max_length=60)
+    endpoint_status = models.SmallIntegerField(default=1)
     
 
 

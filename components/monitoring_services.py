@@ -14,8 +14,8 @@ from components.monitor import Endpoint_Monitor
 
 @csrf_exempt
 def createEndpoint(request:requests): 
-    if request.method == "POST": 
-        try:
+    try:
+        if request.method == "POST": 
         #if the request is a post request, map the data to the corresponding data 
 	    #class and then write it into the database 
 
@@ -28,6 +28,7 @@ def createEndpoint(request:requests):
             endpoint_id = endpoint_ID_Creator(),
             endpoint_name = request_body["endpoint_name"], 
             endpoint_path = request_body["endpoint_path"],
+            endpoint_status = 1
             )
             
             #Creates a new Endpoint object linked to the user via user_id
@@ -35,6 +36,7 @@ def createEndpoint(request:requests):
                                     endpoint_id = config_data.endpoint_id,
                                     endpoint_name = config_data.endpoint_name,
                                     endpoint_path = config_data.endpoint_path,
+                                    endpoint_status = config_data.endpoint_status
                               )
             
             new_endpoint.save()
@@ -50,7 +52,7 @@ def createEndpoint(request:requests):
             ).start()
         
             return JsonResponse({"message":"Successful Post for New Endpoint"}, status = 200)
-        except:
+    except:
             return JsonResponse({"message":"Failed Post for New Endpoint"}, status = 405)
 
 @csrf_exempt 
@@ -83,14 +85,32 @@ def editEndpoint(request):
             return JsonResponse({"message":"Endpoint Failed to be Edited"}, status = 400)
 @csrf_exempt
 def deleteEndpoint(request:requests):
+    try:
         if request.method == "POST":
             
             request_body = json.loads(request.body)
             endpoint_id = request_body['endpoint_id']
             user_endpoint = Endpoint.objects.get(endpoint_id=endpoint_id)
             user_endpoint.delete()
-            print("hello")
-            
-         
             
             return JsonResponse({"message":"Endpoint Successfully Deleted"}, status = 200)
+    except:
+         return JsonResponse({"message":"Endpoint Failed to be Deleted"}, status = 400)
+
+@csrf_exempt
+def update_status(request:requests):
+    try:
+        if request.method == "POST":
+            
+            request_body = json.loads(request.body)
+            endpoint_id = request_body['endpoint_id']
+            endpoint_status = request_body['endpoint_status']
+            
+            user_endpoint = Endpoint.objects.get(endpoint_id=endpoint_id)
+            user_endpoint.endpoint_status = endpoint_status
+            print(endpoint_status)
+            user_endpoint.save()
+            
+            return JsonResponse({"message":"Endpoint Status Successfully Updated"}, status = 200)
+    except:
+         return JsonResponse({"message":"Endpoint Failed to be Updated"}, status = 400)
