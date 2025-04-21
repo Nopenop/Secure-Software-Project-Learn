@@ -66,7 +66,7 @@ class Monitor(threading.Thread):
             }
 
             response = requests.post(
-                "http://127.0.0.1:8000/v2/api/email/",
+                os.environ("HOST_URL")+"v2/api/email/",
                 data=json.dumps(payload),
             )
             response.raise_for_status()
