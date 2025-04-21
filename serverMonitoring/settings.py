@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'http://localhost:5173', 'https://endpoint-monitor.onrender.com/']
+ALLOWED_HOSTS = ['127.0.0.1', 'http://localhost:5173', 'endpoint-monitor.onrender.com']
 
 
 # Application definition
