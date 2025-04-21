@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import certifi
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -141,10 +142,44 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True 
 CSRF_COOKIE_HTTPONLY = False
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+MAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ["HOST_EMAIL"]
-EMAIL_HOST_PASSWORD = os.environ["HOST_EMAIL_PASSWORD"]
+
+ADMIN_EMAIL = ""
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+AES_KEY = ""
+COMPRESSION_PASSWORD = ""
+
+#Environment variables that will be used throughout the program
+try:
+    ADMIN_EMAIL = os.environ["ADMIN_EMAIL"]
+except Exception:
+    ADMIN_EMAIL = ""
+
+try:
+    EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
+except Exception:
+    EMAIL_HOST_USER = ""
+
+try:
+    EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
+except Exception:
+    EMAIL_HOST_PASSWORD = ""
+
+try:
+    AES_KEY = os.environ["AES_KEY"]
+except Exception:
+    AES_KEY = ""
+
+try:
+    COMPRESSION_PASSWORD = os.environ["COMPRESSION_PASSWORD"]
+except Exception:
+    COMPRESSION_PASSWORD = ""
+
 EMAIL_USE_TLS = True
+
+os.environ["SSL_CERT_FILE"] = certifi.where()

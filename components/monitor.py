@@ -66,7 +66,35 @@ class Monitor(threading.Thread):
             }
 
             response = requests.post(
-                "http://127.0.0.1:8000/v2/api/email",
+                "http://127.0.0.1:8000/v2/api/email/",
+                data=json.dumps(payload),
+            )
+            response.raise_for_status()
+            try:
+                return response.json()
+            except ValueError:
+                return {"result": response.text}
+
+        except requests.exceptions.RequestException as e:
+            return {"result": f"Error sending request: {e}"}
+        
+        
+    def _send_mail_monitor(
+        self,
+        subject: str,
+        message: str,
+        endpoint_id:str,
+    ):
+        try:
+            # Prepare the payload
+            payload = {
+                "subject": subject,
+                "message": message,
+                "endpoint_id": endpoint_id
+            }
+
+            response = requests.post(
+                "http://127.0.0.1:8000/v2/api/email/",
                 data=json.dumps(payload),
             )
             response.raise_for_status()
@@ -96,7 +124,7 @@ class CPU_Monitor(Monitor):
         return current_cpu_usage > self._tolerated_cpu_usage
 
     def run(self):
-        print("starting cpu monitor")
+        print("Starting cpu monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             cpu_percent = psutil.cpu_percent(self._time_to_gather_cpu)
@@ -138,7 +166,7 @@ class Memory_Monitor(Monitor):
         return memory_percent > self._tolerated_memory_usage
 
     def run(self):
-        print("starting memory monitor")
+        print("Starting memory monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             vm = psutil.virtual_memory()
@@ -196,7 +224,7 @@ class Disk_Monitor(Monitor):
         return disk_percent > self._tolerated_disk_usage
 
     def run(self):
-        print("starting disk monitor")
+        print("Starting disk monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             disk_usage = shutil.disk_usage(self._path)
@@ -270,7 +298,7 @@ class Endpoint_Monitor(Monitor):
 
 
     def run(self):
-        print("starting endpoint monitor")
+        print("Starting endpoint monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             event_time = datetime.fromtimestamp(time.time())
@@ -285,9 +313,8 @@ class Endpoint_Monitor(Monitor):
                 try:
                     self._log(conn, sql_string, sql_parameters)
                     self.update_status(0)
-                    print("No Exceptions")
+
                 except Exception:
-                    print("Exception Found")
                     self._fail_monitor(conn)
                     self.update_status(1)
                     return
@@ -306,31 +333,38 @@ class Endpoint_Monitor(Monitor):
                 self._build_diagnosis(
                     f"{event_time}: Ceritificate invalid. Error: {s}\n"
                 )
-                self._send_mail(
+                self._send_mail_monitor(
                     "SSL",
                     f"{self._diagnosis}",
+                    self.endpoint_id
                 )
                 self._fail_monitor(conn)
                 return
             except requests.exceptions.ConnectionError as c:
+   
                 self._build_diagnosis(f"{event_time}: Connection Error: {c}\n")
                 self._tally_fault()
             except requests.exceptions.HTTPError as h:
+
                 self._build_diagnosis(f"{event_time}: HTTPError: {h}\n")
                 self._tally_fault()
             except Exception as e:
+          
                 self._build_diagnosis(f"{event_time}: Unknown Error: {e}\n")
-                self._send_mail(
+                self._send_mail_monitor(
                     "HTTP",
                     f"{self._diagnosis}",
+                    self.endpoint_id,
                 )
                 self._fail_monitor(conn)
                 return
             finally:
                 if self._over_tolerance():
-                    self._send_mail(
+       
+                    self._send_mail_monitor(
                         "ENDPOINT",
                         f"{self._diagnosis}",
+                        self.endpoint_id,
                     )
                     self._fail_monitor(conn)
                     return
