@@ -1,108 +1,103 @@
-import os
 import json
-from django.http import JsonResponse, HttpResponseNotAllowed
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+
+from django.core.mail import DEFAULT_ATTACHMENT_MIME_TYPE, EmailMessage
 from django.core.management import call_command
-from django.core.mail import EmailMessage
+import os
 
-from .models import Endpoint  # adjust the import path as needed
-
-TMP_DIR = "./tmp"
-os.makedirs(TMP_DIR, exist_ok=True)
+from Other_Classes.CompressStuff import zip_stuff
 
 
-def send_email(
-    model_type: str,
-    subject: str,
-    message: str,
-    recipient: str,
-    filename_suffix: str = None,
-):
-    """
-    Dumps the given model_type to JSON, attaches it to an email, and sends it
-    to `recipient`.
-    """
-    # build dump filename
-    base = subject.replace(" ", "_")
-    if filename_suffix:
-        base += f"_{filename_suffix}"
-    filename = f"{base}.json"
-    filepath = os.path.join(TMP_DIR, filename)
+def send_email(subject: str, message: str):
+    model_types = [
+        "components.cpu_diagnostics",
+        "components.disk_diagnostics",
+        "components.memory_diagnostics",
+        "components.endpoint_log",
+        "components.endpoint",
+    ]
+    folder = "./tmp"
+    for model in model_types:
+        file_path = os.path.join(folder, model)
+        # Dump database info
+        with open(file_path, "w") as f:
+            call_command(
+                "dumpdata",
+                model,
+                format="json",
+                indent=3,
+                stdout=f,
+            )
 
-    # dumpmodel data
-    with open(filepath, "w") as f:
-        call_command(
-            "dumpdata",
-            model_type,
-            format="json",
-            indent=2,
-            stdout=f,
-        )
+    # Create Archive
+    archive_path = ""
+    try:
+        aes_key = settings.AES_KEY.encode()
+        compression_password = settings.COMPRESSION_PASSWORD.encode()
+        archive_path = zip_stuff(folder, compression_password, aes_key)
+    except Exception as e:
+        raise e
 
-    with open(filepath, "r") as f:
+    # Read contents of archive
+    with open(archive_path, "rb") as f:
         file_content = f.read()
 
-    # prepend endpoint info if available
-    full_message = message
+    # Remove files in tmp directory
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print("Failed to delete %s. Reason: %s" % (file_path, e))
+            raise e
 
+    # Remove Archive
+    os.unlink(archive_path)
+
+    # Send Email with Attached Container
     email = EmailMessage(
-        subject=subject,
-        body=full_message,
-        from_email=settings.EMAIL_HOST_USER,
-        to=[recipient],
+        subject,
+        message,
+        settings.EMAIL_HOST_USER,
+        [settings.ADMIN_EMAIL],
     )
-    email.attach(filename, file_content, "application/json")
+    email.attach("secure-archive.zip", file_content, DEFAULT_ATTACHMENT_MIME_TYPE)
     email.send()
 
 
 @csrf_exempt
 def send_mail_page(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"], "Only POST allowed")
+    context = {}
 
-    try:
-        payload = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if request.method == "POST":
+        json_data = json.loads(request.body)
 
-    subject_key  = payload.get("subject", "")
-    message      = payload.get("message", "")
-    endpoint_id  = payload.get("endpoint_id")
+        subject = json_data["subject"]
+        message = json_data["message"]
 
-    if not endpoint_id:
-        return JsonResponse({"error": "Missing endpoint_id"}, status=400)
+        if subject == "CPU":
+            subject = "CPU Usage Exceeded Limit Over Tolerable Amount"
+        elif subject == "DISK":
+            subject = "Disk Usage Exceeded Limit Over Tolerable Amount"
+        elif subject == "MEMORY":
+            subject = "Memory Usage Exceeded Limit Over Tolerable Amount"
+        elif subject == "SSL":
+            subject = "SSL Error invalid SSL"
+        elif subject == "ENDPOINT":
+            subject = "Endpoint Invalid Responses Exceeded Limit Over Tolerable Amount"
+        elif subject == "HTTP":
+            subject = "HTTP Error of unknown type"
+        try:
+            send_email(
+                subject,
+                message,
+            )
+            context["result"] = "Email sent successfully"
+        except Exception as e:
+            context["result"] = f"Error sending email: {e}"
+            raise e
 
-    # look up endpoint → user
-    try:
-        endpoint = Endpoint.objects.select_related("user_id").get(endpoint_id=endpoint_id)
-    except Endpoint.DoesNotExist:
-        return JsonResponse({"error": "Endpoint not found"}, status=404)
-
-    user_email = endpoint.user_id.email
-
-    # map incoming key → model & nice subject
-    subject_map = {
-        "CPU":      ("components.cpu_diagnostics", "CPU Usage Exceeded Limit"),
-        "DISK":     ("components.disk_diagnostics", "Disk Usage Exceeded Limit"),
-        "MEMORY":   ("components.memory_diagnostics", "Memory Usage Exceeded Limit"),
-        "SSL":      ("components.endpoint_log",     "SSL Certificate Error"),
-        "ENDPOINT": ("components.endpoint_log",     "Endpoint Response Error"),
-        "HTTP":     ("components.endpoint_log",     "HTTP Error Encountered"),
-    }
-
-    if subject_key not in subject_map:
-        return JsonResponse({"error": "Unknown subject"}, status=400)
-
-    model_type, nice_subject = subject_map[subject_key]
-
-    # include endpoint_id in message header
-    prefixed_message = f"Endpoint ID: {endpoint_id}\n\n{message}"
-    send_email(
-            model_type=model_type,
-            subject=nice_subject,
-            message=prefixed_message,
-            recipient=user_email,
-            filename_suffix=endpoint_id
-        )
-    return JsonResponse({"result": "Email sent successfully to " + user_email}, status=201)
+    return HttpResponse(status=201)
