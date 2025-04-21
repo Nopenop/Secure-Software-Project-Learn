@@ -23,13 +23,17 @@ Within a secure shell to your cloud web server run:
 
 ```bash
 # Create virtual environment
-python -m venv .venv
+python3 -m venv .venv
 
 # Start virtual environment
 source ./.venv/bin/activate
 
 # Install all requirements needed to run the application
 pip install -r requirements.txt
+
+# create the database tables
+python manage.py makemigrations
+python manage.py migrate
 
 # Change run script for 
 sudo chmod u+x ./runme.sh

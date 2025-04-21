@@ -19,7 +19,7 @@ def send_email(subject: str, message: str):
         "components.endpoint",
     ]
     folder = "./tmp"
-    os.makedirs(folder)
+    os.makedirs(folder, exist_ok=True)
     for model in model_types:
         file_path = os.path.join(folder, model)
         # Dump database info
