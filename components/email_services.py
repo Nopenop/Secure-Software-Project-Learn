@@ -100,4 +100,5 @@ def send_mail_page(request):
             context["result"] = f"Error sending email: {e}"
             raise e
 
+
     return HttpResponse(status=201)

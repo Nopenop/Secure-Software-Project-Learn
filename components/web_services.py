@@ -1,7 +1,5 @@
 import requests
 import json
-import secrets
-import binascii
 
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -53,7 +51,8 @@ def getUserEndpoints(request):
                 {
                 "endpoint_id": endpoint.endpoint_id,
                 "endpoint_name": endpoint.endpoint_name,
-                "endpoint_path": endpoint.endpoint_path
+                "endpoint_path": endpoint.endpoint_path,
+                "endpoint_status": endpoint.endpoint_status
                 }
                 for endpoint in endpoints
             ]
@@ -62,17 +61,3 @@ def getUserEndpoints(request):
     
         except:
             return JsonResponse({"message":"Error in fetching endpoints"}, status = 400)
-
-
-
-#Edit an endpoint function
-
-def editEndpoint(request:requests):
-    
-    if request.method == "POST":
-    
-        endpoint_id = request.GET.get('Endpoint_ID')
-        Endpoint.objects.get(endpoint_id=endpoint_id)
-        return JsonResponse({})
-
-#Delete an endpoint function

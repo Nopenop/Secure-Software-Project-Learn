@@ -42,6 +42,9 @@ def createUser(request:requests):
 
             
             new_user.save()
+            
+            
+            
             return HttpResponse(status = 200)
     except:
         return HttpResponse(status = 400)

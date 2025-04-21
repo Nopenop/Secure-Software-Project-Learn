@@ -251,6 +251,18 @@ class Endpoint_Monitor(Monitor):
 
     def _build_diagnosis(self, log: str):
         self._diagnosis += log
+        
+    def update_status(self, status:int):
+        payload = {"endpoint_id":self.endpoint_id,
+                "endpoint_status":status}
+            
+        response = requests.post(
+                "http://127.0.0.1:8000/v2/api/update-status",
+                data=json.dumps(payload),
+                headers={"Content-Type": "application/json"},
+                verify=False
+        )
+
 
     def run(self):
         conn = sqlite3.connect(self._database_path)
@@ -266,8 +278,10 @@ class Endpoint_Monitor(Monitor):
                 )
                 try:
                     self._log(conn, sql_string, sql_parameters)
+                    self.update_status(0)
                 except Exception:
                     self._fail_monitor(conn)
+                    self.update_status(1)
                     return
 
                 if not self._check_response_code(response):
@@ -278,6 +292,8 @@ class Endpoint_Monitor(Monitor):
                 response.close()
 
             except requests.exceptions.SSLError as s:
+                self.update_status(1)
+                
                 # fail endpoint monitor
                 self._build_diagnosis(
                     f"{event_time}: Ceritificate invalid. Error: {s}\n"
