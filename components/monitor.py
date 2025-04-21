@@ -8,6 +8,8 @@ import requests
 import sqlite3
 from datetime import datetime
 import urllib3
+from dotenv import load_dotenv
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -260,7 +262,7 @@ class Endpoint_Monitor(Monitor):
                 "endpoint_status":status}
             
         response = requests.post(
-                "http://127.0.0.1:8000/v2/api/update-status",
+                os.environ("BASE_URL")+"v2/api/update-status",
                 data=json.dumps(payload),
                 headers={"Content-Type": "application/json"},
                 verify=False
