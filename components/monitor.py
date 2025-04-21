@@ -262,7 +262,7 @@ class Endpoint_Monitor(Monitor):
                 "endpoint_status":status}
             
         response = requests.post(
-                os.environ("BASE_URL")+"v2/api/update-status",
+                os.environ.get("HOST_URL")+"v2/api/update-status",
                 data=json.dumps(payload),
                 headers={"Content-Type": "application/json"},
                 verify=False
