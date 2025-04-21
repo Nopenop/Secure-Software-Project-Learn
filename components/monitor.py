@@ -94,6 +94,7 @@ class CPU_Monitor(Monitor):
         return current_cpu_usage > self._tolerated_cpu_usage
 
     def run(self):
+        print("starting cpu monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             cpu_percent = psutil.cpu_percent(self._time_to_gather_cpu)
@@ -135,6 +136,7 @@ class Memory_Monitor(Monitor):
         return memory_percent > self._tolerated_memory_usage
 
     def run(self):
+        print("starting memory monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             vm = psutil.virtual_memory()
@@ -192,6 +194,7 @@ class Disk_Monitor(Monitor):
         return disk_percent > self._tolerated_disk_usage
 
     def run(self):
+        print("starting disk monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             disk_usage = shutil.disk_usage(self._path)
@@ -253,6 +256,7 @@ class Endpoint_Monitor(Monitor):
         self._diagnosis += log
 
     def run(self):
+        print("starting endpoint monitor")
         conn = sqlite3.connect(self._database_path)
         while True:
             event_time = datetime.fromtimestamp(time.time())
