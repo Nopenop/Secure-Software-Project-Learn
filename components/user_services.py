@@ -21,7 +21,6 @@ def ID_Creator():
     
 @csrf_exempt
 def createUser(request:requests): 
-    try:
         if request.method == "POST": 
         #if the request is a post request, map the data to the corresponding data 
 	    #class and then write it into the database 
@@ -46,5 +45,3 @@ def createUser(request:requests):
             
             
             return HttpResponse(status = 200)
-    except:
-        return HttpResponse(status = 400)
