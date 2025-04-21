@@ -262,7 +262,7 @@ class Endpoint_Monitor(Monitor):
                 "endpoint_status":status}
             
         response = requests.post(
-                os.environ.get("HOST_URL")+"v2/api/update-status",
+                os.environ.get("HOST_URL")+"v2/api/update-status/",
                 data=json.dumps(payload),
                 headers={"Content-Type": "application/json"},
                 verify=False
@@ -285,7 +285,9 @@ class Endpoint_Monitor(Monitor):
                 try:
                     self._log(conn, sql_string, sql_parameters)
                     self.update_status(0)
+                    print("No Exceptions")
                 except Exception:
+                    print("Exception Found")
                     self._fail_monitor(conn)
                     self.update_status(1)
                     return

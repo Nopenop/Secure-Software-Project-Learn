@@ -1,6 +1,6 @@
 import requests
 import json
-
+import os
 
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -58,33 +58,58 @@ def createEndpoint(request:requests):
 @csrf_exempt 
 def editEndpoint(request):
     try:
-        if request.method == "POST":
-            request_body = json.loads(request.body)
+        if request.method == "POST": 
             
-            endpoint_id = request_body["endpoint_id"]
-            user_endpoint = Endpoint.objects.get(endpoint_id=endpoint_id)
+            userID = request.GET.get('userID')
+            request_body = json.loads(request.body)	 
+            old_endpoint_id = request_body["endpoint_id"]
+            print(old_endpoint_id)
 
-            user_endpoint.endpoint_name = request_body['endpoint_name']
-            user_endpoint.endpoint_path = request_body['endpoint_path']
-            user_endpoint.save()
+            
+            config_data = Endpoint_Data(
+            user_id = userID,
+            endpoint_id = endpoint_ID_Creator(),
+            endpoint_name = request_body["endpoint_name"], 
+            endpoint_path = request_body["endpoint_path"],
+            endpoint_status = 1
+            )
+            
+            #Creates a new Endpoint object linked to the user via user_id
+            new_endpoint = Endpoint(user_id=User.objects.get(user_id = config_data.user_id), 
+                                    endpoint_id = config_data.endpoint_id,
+                                    endpoint_name = config_data.endpoint_name,
+                                    endpoint_path = config_data.endpoint_path,
+                                    endpoint_status = config_data.endpoint_status
+                              )
             
             
+            
+            user_endpoint = Endpoint.objects.get(endpoint_id=old_endpoint_id)
+            user_endpoint.delete()
+            
+            new_endpoint.save()
+            
+          
             Endpoint_Monitor(
                 5,
                 1,
-                endpoint_id=endpoint_id,
-                url=request_body['endpoint_path'],
+                endpoint_id=config_data.endpoint_id,
+                url=config_data.endpoint_path,
                 expected_code=200,
                 database_path='./db.sqlite3',
                 certificate_path="",
             ).start()
-
-            return JsonResponse({"message": "Endpoint Successfully Edited"}, status=200)
-
+            
+        
+        return JsonResponse({"message":"Endpoint Successfully Updated"}, status = 200)
     except:
-            return JsonResponse({"message":"Endpoint Failed to be Edited"}, status = 400)
+         return JsonResponse({"message":"Endpoint Failed to be Updated"}, status = 400)
+ 
+        
+
 @csrf_exempt
 def deleteEndpoint(request:requests):
+    print("Deletion Called")
     try:
         if request.method == "POST":
             
