@@ -236,7 +236,7 @@ class Endpoint_Monitor(Monitor):
                     self._build_diagnosis(
                         f"{cur_time}: Expected {self._expected_code}, got {response.status_code}\n"
                     )
-                    self.update_status(0)
+                    self.update_status(1)
                 response.close()
 
             except requests.exceptions.SSLError as s:
