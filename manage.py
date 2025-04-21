@@ -9,7 +9,7 @@ import components.monitor
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "admin.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "serverMonitoring.settings")
 
     try:
         # On production, create cpu, disk, and memory monitors
