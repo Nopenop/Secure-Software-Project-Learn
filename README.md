@@ -51,8 +51,6 @@ The AES_KEY used to encrypt your files will be generated and printed out to stdo
 
 For this instance of the server, you will never get the AES_KEY again.
 
-You will need to 
-
 ## Diagrams:
 
 ```mermaid
